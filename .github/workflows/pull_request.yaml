@@ -1,0 +1,25 @@
+
+on:
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-actions@v2
+        with:
+          flutter-version: "3.29.0"
+          channel: stable
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Lint Code
+        run: flutter analyze
+
