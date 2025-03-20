@@ -23,5 +23,5 @@ jobs:
       - name: Lint Code
         run: flutter analyze
 
-      - name: Ensure App BUilds
+      - name: Ensure App Builds
         run: flutter build apk --debug
