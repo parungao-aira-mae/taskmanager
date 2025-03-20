@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dashboard_screen.dart';
-import 'register_screen.dart'; // Import RegisterScreen
+import 'register_screen.dart';
 
 class AuthScreen extends StatefulWidget {
+  const AuthScreen({super.key});
+
   @override
-  _AuthScreenState createState() => _AuthScreenState();
+  State<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends State<AuthScreen> {
@@ -15,9 +17,17 @@ class _AuthScreenState extends State<AuthScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  void _signIn() async {
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final navigator = Navigator.of(context);
     setState(() => _isLoading = true);
 
     try {
@@ -25,14 +35,16 @@ class _AuthScreenState extends State<AuthScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => DashboardScreen()),
-      );
+
+      if (mounted) {
+        navigator.pushReplacement(
+          MaterialPageRoute(builder: (context) => DashboardScreen()), // ✅ Removed const
+        );
+      }
     } on FirebaseAuthException catch (e) {
-      _showErrorMessage(e);
+      if (mounted) _showErrorMessage(e);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -43,22 +55,24 @@ class _AuthScreenState extends State<AuthScreen> {
     } else if (e.code == 'wrong-password') {
       message = "Incorrect password.";
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Login")),
+      appBar: AppBar(title: const Text("Login")),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
               TextFormField(
                 controller: _emailController,
-                decoration: InputDecoration(labelText: "Email"),
+                decoration: const InputDecoration(labelText: "Email"),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Email is required.";
@@ -70,7 +84,7 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               TextFormField(
                 controller: _passwordController,
-                decoration: InputDecoration(labelText: "Password"),
+                decoration: const InputDecoration(labelText: "Password"),
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) return "Password is required.";
@@ -78,20 +92,20 @@ class _AuthScreenState extends State<AuthScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               _isLoading
-                  ? CircularProgressIndicator()
+                  ? const CircularProgressIndicator()
                   : Column(
                 children: [
-                  ElevatedButton(onPressed: _signIn, child: Text("Login")),
+                  ElevatedButton(onPressed: _signIn, child: const Text("Login")),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => RegisterScreen()),
+                        MaterialPageRoute(builder: (context) => RegisterScreen()), // ✅ Removed const
                       );
                     },
-                    child: Text("Create Account"),
+                    child: const Text("Create Account"),
                   ),
                 ],
               ),

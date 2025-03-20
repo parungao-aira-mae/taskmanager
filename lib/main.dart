@@ -7,7 +7,6 @@ import 'screen/auth_screen.dart';
 import 'theme_provider.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print("Background Message: ${message.notification?.title}");
 }
 
 void main() async {
@@ -25,6 +24,8 @@ void main() async {
 }
 
 class TaskManagerApp extends StatefulWidget {
+  const TaskManagerApp({super.key});
+
   @override
   _TaskManagerAppState createState() => _TaskManagerAppState();
 }
@@ -41,14 +42,11 @@ class _TaskManagerAppState extends State<TaskManagerApp> {
 
     NotificationSettings settings = await messaging.requestPermission();
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print("Notifications enabled!");
     }
 
-    String? token = await messaging.getToken();
-    print("FCM Token: $token");
+    String? _ = await messaging.getToken();
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("Foreground Message: ${message.notification?.title}");
     });
   }
 
