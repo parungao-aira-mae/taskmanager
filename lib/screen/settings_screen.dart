@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../theme_provider.dart'; // Import Theme Provider
+import '../theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key}); // ✅ Used super parameter
+
   @override
-  _SettingsScreenState createState() => _SettingsScreenState();
+  State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
@@ -18,14 +20,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadPreferences() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
     });
   }
 
   Future<void> _saveNotificationsPreference(bool value) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notificationsEnabled', value);
   }
 
@@ -34,18 +37,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text("Settingss")),
+      appBar: AppBar(title: const Text("Settings")),
       body: ListView(
         children: [
           SwitchListTile(
-            title: Text("Dark Mode"),
+            title: const Text("Dark Mode"),
             value: themeProvider.isDarkMode,
             onChanged: (value) {
               themeProvider.toggleDarkMode();
             },
           ),
           SwitchListTile(
-            title: Text("Enable Notifications"),
+            title: const Text("Enable Notifications"),
             value: notificationsEnabled,
             onChanged: (value) {
               setState(() {

@@ -7,39 +7,59 @@ import 'task_edit_screen.dart';
 import 'settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
+
   @override
-  _DashboardScreenState createState() => _DashboardScreenState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
   Map<String, bool> selectedTasks = {}; // Store selected task IDs
 
-  void _logout(BuildContext context) async {
-    bool confirmLogout = await _showConfirmationDialog(context, "Logout", "Are you sure you want to log out?");
-    if (confirmLogout) {
-      await FirebaseAuth.instance.signOut();
-      Fluttertoast.showToast(msg: "Logged out successfully!");
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AuthScreen()));
-    }
+  Future<void> _logout() async {
+    bool confirmLogout = await _showConfirmationDialog("Logout", "Are you sure you want to log out?");
+
+    if (!confirmLogout) return; // Hindi na kailangang mag-check ng `mounted` dito
+
+    await FirebaseAuth.instance.signOut();
+    Fluttertoast.showToast(msg: "Logged out successfully!");
+
+    if (!mounted) return; // Iwasan ang pag-access sa `context` kung hindi na mounted
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthScreen()),
+    );
   }
 
-  Future<bool> _showConfirmationDialog(BuildContext context, String title, String message) async {
-    return await showDialog(
+
+  Future<bool> _showConfirmationDialog(String title, String message) async {
+    if (!mounted) return false;
+    return await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
         content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text("Yes")),
+          TextButton(
+            child: const Text("Cancel"),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          TextButton(
+            child: const Text("Yes"),
+            onPressed: () => Navigator.pop(context, true),
+          ),
         ],
       ),
-    ) ?? false;
+    ) ??
+        false;
   }
 
-  void _deleteSelectedTasks() async {
-    bool confirmDelete = await _showConfirmationDialog(context, "Delete Selected Tasks", "Are you sure you want to delete selected tasks?");
+  Future<void> _deleteSelectedTasks() async {
+    bool confirmDelete = await _showConfirmationDialog("Delete Selected Tasks", "Are you sure you want to delete selected tasks?");
+    if (!mounted) return;
+
     if (confirmDelete) {
       for (String taskId in selectedTasks.keys.where((id) => selectedTasks[id]!)) {
         await FirebaseFirestore.instance.collection('tasks').doc(taskId).delete();
@@ -50,76 +70,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
       Fluttertoast.showToast(msg: "Selected tasks deleted!");
     }
   }
-
   void _addTask() {
     TextEditingController taskController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Add Task"),
+        title: const Text("Add Task"),
         content: TextField(
           controller: taskController,
-          decoration: InputDecoration(hintText: "Enter task"),
+          decoration: const InputDecoration(hintText: "Enter task"),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
           TextButton(
-            onPressed: () async {
-              if (taskController.text.trim().isNotEmpty) {
-                await FirebaseFirestore.instance.collection('tasks').add({
-                  'title': taskController.text.trim(),
+            child: const Text("Cancel"),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TextButton(
+            child: const Text("Add"),
+            onPressed: () {
+              String taskText = taskController.text.trim();
+              if (taskText.isNotEmpty) {
+                Navigator.pop(context); // Isara ang dialog bago ang async operation
+
+                FirebaseFirestore.instance.collection('tasks').add({
+                  'title': taskText,
                   'userId': user?.uid,
                   'createdAt': Timestamp.now(),
+                }).then((_) {
+                  Fluttertoast.showToast(msg: "Task added successfully!");
+                  setState(() {}); // I-refresh ang UI kung mounted pa
+                }).catchError((error) {
+                  Fluttertoast.showToast(msg: "Failed to add task: $error");
                 });
-                Navigator.pop(context);
-                Fluttertoast.showToast(msg: "Task added successfully!");
-                setState(() {});
               } else {
                 Fluttertoast.showToast(msg: "Task cannot be empty!");
               }
             },
-            child: Text("Add"),
           ),
         ],
       ),
     );
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Dashboard")),
+      appBar: AppBar(title: const Text("Dashboard")),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
-              accountName: Text("User Profile", style: TextStyle(fontSize: 18)),
+              accountName: const Text("User Profile", style: TextStyle(fontSize: 18)),
               accountEmail: Text(user?.email ?? "No email"),
-              currentAccountPicture: CircleAvatar(
+              currentAccountPicture: const CircleAvatar(
                 backgroundColor: Colors.white,
                 child: Icon(Icons.person, size: 40, color: Colors.blue),
               ),
             ),
             ListTile(
-              leading: Icon(Icons.person),
-              title: Text("Profile"),
+              leading: const Icon(Icons.person),
+              title: const Text("Profile"),
               onTap: () {},
             ),
             ListTile(
-              leading: Icon(Icons.settings),
-              title: Text("Settings"),
+              leading: const Icon(Icons.settings),
+              title: const Text("Settings"),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SettingsScreen()),
-                );
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
               },
             ),
             ListTile(
-              leading: Icon(Icons.logout, color: Colors.red),
-              title: Text("Logout"),
-              onTap: () => _logout(context),
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text("Logout"),
+              onTap: _logout,
             ),
           ],
         ),
@@ -134,8 +160,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text("No tasks available"));
                 }
 
                 var tasks = snapshot.data!.docs;
@@ -147,8 +176,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     return Card(
                       elevation: 2,
-                      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                       child: ListTile(
+                        title: Text(task['title'], style: const TextStyle(fontSize: 18)),
                         leading: Checkbox(
                           value: selectedTasks[taskId] ?? false,
                           onChanged: (bool? value) {
@@ -157,12 +187,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             });
                           },
                         ),
-                        title: Text(task['title'], style: TextStyle(fontSize: 18)),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: Icon(Icons.edit, color: Colors.blue),
+                              icon: const Icon(Icons.edit, color: Colors.blue),
                               onPressed: () async {
                                 var result = await Navigator.push(
                                   context,
@@ -174,21 +203,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                 );
 
-                                // Kung updated, magpakita ng toast message
-                                if (result != null && result is Map<String, dynamic> && result["updated"] == true) {
+                                if (mounted && result != null && result["updated"] == true) {
                                   Fluttertoast.showToast(msg: "Task updated successfully!");
                                   setState(() {});
                                 }
                               },
                             ),
                             IconButton(
-                              icon: Icon(Icons.delete, color: Colors.red),
+                              icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () async {
-                                bool confirmDelete = await _showConfirmationDialog(context, "Delete Task", "Are you sure you want to delete this task?");
+                                bool confirmDelete = await _showConfirmationDialog("Delete Task", "Are you sure you want to delete this task?");
                                 if (confirmDelete) {
                                   await FirebaseFirestore.instance.collection('tasks').doc(taskId).delete();
-                                  setState(() {});
-                                  Fluttertoast.showToast(msg: "Task deleted!");
+                                  if (mounted) {
+                                    setState(() {});
+                                    Fluttertoast.showToast(msg: "Task deleted!");
+                                  }
                                 }
                               },
                             ),
@@ -201,13 +231,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
           ),
-
           if (selectedTasks.containsValue(true))
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: ElevatedButton.icon(
-                icon: Icon(Icons.delete, color: Colors.white),
-                label: Text("Delete Selected"),
+                icon: const Icon(Icons.delete, color: Colors.white),
+                label: const Text("Delete Selected"),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 onPressed: _deleteSelectedTasks,
               ),
@@ -215,9 +244,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addTask,
-        child: Icon(Icons.add, color: Colors.white),
         backgroundColor: Colors.blue,
+        onPressed: _addTask,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

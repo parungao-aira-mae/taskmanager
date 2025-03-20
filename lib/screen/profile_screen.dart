@@ -4,41 +4,51 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'auth_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  final User? user = FirebaseAuth.instance.currentUser; // Kukunin ang logged-in user
+  final User? user;
+
+  // ✅ Ginamit ang super parameter para sa key
+  const ProfileScreen({super.key, required this.user});
 
   void _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    Fluttertoast.showToast(msg: "Logged out successfully!");
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => AuthScreen()), // Babalik sa login page
-    );
+    try {
+      await FirebaseAuth.instance.signOut();
+
+      if (!context.mounted) return; // Siguraduhin na mounted pa ang widget
+
+      Fluttertoast.showToast(msg: "Logged out successfully!");
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AuthScreen()), // Babalik sa login page
+      );
+    } catch (error) {
+      Fluttertoast.showToast(msg: "Logout failed: $error");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Profile")),
+      appBar: AppBar(title: const Text("Profile")),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person, size: 100, color: Colors.blue),
-            SizedBox(height: 10),
-            Text(
+            const Icon(Icons.person, size: 100, color: Colors.blue),
+            const SizedBox(height: 10),
+            const Text(
               "Logged in as:",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 5),
+            const SizedBox(height: 5),
             Text(
               user?.email ?? "No email", // Ipapakita ang email ng user
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () => _logout(context),
-              icon: Icon(Icons.logout),
-              label: Text("Logout"),
+              icon: const Icon(Icons.logout),
+              label: const Text("Logout"),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             ),
           ],
